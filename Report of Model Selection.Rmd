@@ -114,9 +114,11 @@ rfPred <- predict(Modrf, newdata = validation)
 confusionMatrix(rfPred, validation$classe)
 ```
 
+Random forest has an accuracy of of 0.9981, and is a little faster than gbm method.
+
 ## Conclusion
 
-In conclusion, Random Forest is selected as the final prediction model, which has a accuracy of 0.9981 on the validation set.
+In conclusion, Random Forest is selected as the final prediction model, which has a accuracy of 0.9981 on the validation set. The expected out-of-sample error is 0.19%.
 
 
 
