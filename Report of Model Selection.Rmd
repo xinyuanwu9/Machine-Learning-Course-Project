@@ -1,0 +1,121 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Xinyuan Wu"
+date: "September 4, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. In this project, six participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. Our goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to build a machine learning method that can be used to predict the type of activities.
+
+Three different tree-based models are tested. Based on prediction accuracy on the validation data set, random forest is selected as the final model to be applied to the testing set.
+
+## Data Processing
+
+In this section, we are going to summarize the data processing procedure prior to model building. By looking at the data, we decided to treat both "NA" and "#DIV/0!" as NA value.
+```{r, message = FALSE}
+library(caret)
+library(rattle)
+library(rpart)
+library(randomForest)
+train <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
+```
+
+After loading the data, we create a validation set that can be used to estimate the out-of-sample error rate.
+```{r}
+# create the validation set
+set.seed(1314)
+inTrain <- createDataPartition(y = train$classe, p=0.7, list = FALSE)
+training <- train[inTrain, ]
+validation <- train[-inTrain, ]
+dim(training); dim(validation); dim(testing)
+```
+
+Then we need to decide which variables should be included in the prediction. First, we check and remove near zero variables using nearZeroVar function.
+```{r}
+# remove near-zero variables
+nzv <- nearZeroVar(training,saveMetrics=TRUE)$nzv
+training <- training[, !nzv]
+validation <- validation[, !nzv]
+testing <- testing[, !nzv]
+```
+
+Second, we need to deal with NA values.
+```{r}
+NAv <- sapply(training, function(x) sum(is.na(x)))
+unique(NAv)
+```
+
+It can be seen that in this data set, a column is either having zero missing values or is containing many missing values. Therefore, we remove the columns that has missing values.
+```{r}
+training <- training[, NAv == 0]
+validation <- validation[, NAv == 0]
+testing <- testing[, NAv == 0]
+```
+
+Finally, the first column contains only observation number, so it can be removed from all three data sets.
+```{r}
+training <- training[, -1]
+validation <- validation[, -1]
+# the last column of testing contains useless information as well
+testing <- testing[, -c(1, 59)]
+# transform the data into the same data type
+testing <- rbind(training[, -58], testing)
+testing <- tail(testing, n = 20)
+dim(training); dim(validation); dim(testing)
+```
+
+The final tidy data contains 58 variables, including 1 outcome variable.
+
+## Model Selection
+
+Since the outcome is a factor that contains 5 possibilities, linear regression model may not be a good choice, so we decided to try three different tree models.
+
+### Decision Trees
+
+```{r, cache = TRUE}
+set.seed(1314)
+Modrpart <- rpart(classe ~ ., data = training)
+rpartPred <- predict(Modrpart, validation, type = "class")
+confusionMatrix(rpartPred, validation$classe)
+fancyRpartPlot(Modrpart)
+```
+
+Single decision tree saves a lot of computation, but having an accuracy of 0.872 is not good enough for our prediction.
+
+### Boosting with Trees
+
+```{r, cache = TRUE, message = FALSE}
+set.seed(1314)
+ctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 1)
+Modgbm <- train(classe ~ ., method = "gbm", data = training, 
+			trControl = ctrl, verbose = FALSE)
+gbmPred <- predict(Modgbm, newdata = validation)
+confusionMatrix(gbmPred, validation$classe)
+```
+
+This method is significantly slower than the single decision tree, but it has much higher accuracy (0.9975).
+
+### Random Forest
+
+```{r, cache = TRUE}
+set.seed(1314)
+# much faster than train function with "rf" method as argument
+Modrf <- randomForest(classe ~ ., data = training)
+rfPred <- predict(Modrf, newdata = validation)
+confusionMatrix(rfPred, validation$classe)
+```
+
+## Conclusion
+
+In conclusion, Random Forest is selected as the final prediction model, which has a accuracy of 0.9981 on the validation set.
+
+
+
+
