@@ -252,9 +252,11 @@ confusionMatrix(rfPred, validation$classe)
 ## Balanced Accuracy      0.9993   0.9992   0.9983   0.9976   0.9993
 ```
 
+Random forest has an accuracy of of 0.9981, and is a little faster than gbm method.
+
 ## Conclusion
 
-In conclusion, Random Forest is selected as the final prediction model, which has a accuracy of 0.9981 on the validation set.
+In conclusion, Random Forest is selected as the final prediction model, which has a accuracy of 0.9981 on the validation set. The expected out-of-sample error is 0.19%.
 
 
 
